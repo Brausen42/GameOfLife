@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+		<link rel="stylesheet" href="gol.css" type="text/css">
+
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular.min.js"></script>
+		<script src="gl-matrix.js"></script>
+		<script src="gol.js" type="text/javascript"></script>
+	</head>
+
+	<body>
+		<div ng-app="gol" ng-controller="golCtrl">
+			<div id="welcome" class="modal fade" role="dialog">
+	      <div class="modal-dialog modal-lg">
+	        <div class="modal-content">
+	          <div class="modal-header">
+	            <h1>Game of Life</h1>
+	          </div>
+	          <div class="modal-body">
+							<ul class="nav nav-tabs nav-justified">
+								<li class="active"><a data-toggle="tab" href="#quick">Quick</a></li>
+								<li><a data-toggle="tab" href="#custom">Custom</a></li>
+							</ul>
+							<div class="tab-content">
+								<div id="quick" class="tab-pane fade in active">
+									<div class="input-group input-group-lg">
+										<div class="radio">
+											<label><input type="radio" name="size" ng-value="{pop:500,width:15,height:15,size:20}" ng-model="init">Small</label>
+										</div>
+										<div class="radio">
+											<label><input type="radio" name="size" ng-value="{pop:5000,width:50,height:50,size:100}" ng-model="init">Medium</label>
+										</div>
+										<div class="radio">
+											<label><input type="radio" name="size" ng-value="{pop:50000,width:120,height:120,size:150}" ng-model="init">Large</label>
+										</div>
+										<div class="radio">
+											<label><input type="radio" name="size" ng-value="{pop:100000,width:300,height:300,size:400}" ng-model="init">Xtra Large</label>
+										</div>
+									</div>
+								</div>
+								<div id="custom" class="tab-pane fade">
+									<div class="form-group">
+									 <label for="usr">Starting Population:</label>
+									 <input type="number" class="form-control" ng-model="init.pop">
+									</div>
+									<div class="form-group">
+									 <label for="pwd">Width:</label>
+									 <input type="number" class="form-control" ng-model="init.width">
+									</div>
+									<div class="form-group">
+									 <label for="pwd">Height:</label>
+									 <input type="number" class="form-control" ng-model="init.height">
+									</div>
+									<div class="form-group">
+									 <label for="pwd">Cell size:</label>
+									 <input type="number" class="form-control" ng-model="init.size">
+									</div>
+								</div>
+							</div>
+	          </div>
+	          <div class="modal-footer">
+	            <button type="button" class="btn btn-block btn-success" data-dismiss="modal" ng-click="start()">Start</button>
+	          </div>
+	        </div>
+	      </div>
+	    </div>
+			<div class="overlay">
+				<button id="controls" class="btn btn-md">Controls</button>
+			</div>
+			<canvas id="gol"></canvas>
+		</div>
+	</body>
+</html>
