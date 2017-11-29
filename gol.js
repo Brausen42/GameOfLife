@@ -15,8 +15,6 @@ gol_app.controller('golCtrl',function($scope){
 		}
 	}
 
-	// let canvas = document.getElementById('gol');
-	// let control = canvas.getContext('2d');
 	let canvas_active = false;
 
 	let going = null; // used to hold interval object
@@ -271,8 +269,15 @@ gol_app.controller('golCtrl',function($scope){
 	});
 
 	let world = function(){
-		let cells = new Map();
-		let size = 0;
+		let world_data = new ArrayBuffer(1000000);
+		let cells = new Int8Array(world_data);
+
+		let masks = {
+			on:1,
+			neighbors: 7 << 1
+		}
+
+		let cells_of_interest = [];
 
 		let cell_id = function(){
 			let x_reg = /x(.*)y/;
@@ -290,6 +295,16 @@ gol_app.controller('golCtrl',function($scope){
 		}();
 
 		let positions = {
+			all:[
+				{x:-1,y:1},
+				{x:0,y:1},
+				{x:1,y:1},
+				{x:-1,y:0},
+				{x:1,y:0},
+				{x:-1,y:-1},
+				{x:0,y:-1},
+				{x:1,y:-1}
+			],
 			pre:[
 				{x:-1,y:1},
 				{x:0,y:1},
@@ -305,7 +320,8 @@ gol_app.controller('golCtrl',function($scope){
 		}
 
 		let next_states = null;
-		let populateNextStates = function(){
+		// populate next_states
+		{
 			next_states = new Map();
 			for(let i = 0 ; i < 512 ; i++){
 				let place_finder = i;
@@ -332,80 +348,51 @@ gol_app.controller('golCtrl',function($scope){
 					next_states.set(i,0);
 				}
 			}
-		}
+		};
+
+		let live_nums = new Set([5,6,7]);
 
 		let getCell = function(x,y){
-			return cells.has(cell_id.create(x,y)) ? 1 : 0;
+			let val = cells[(x + 500) + ((y + 500) * 1000)];
+			return val !== undefined ? val : 0;
 		}
 
-		populateNextStates();
+
 
 		return {
 			advanceTime:function(){
-				let deaths = [];
-				let births = [];
-
-				let potential_birth = [];
-
-				// deaths
-				let active_cells = world.getActiveCells();
-				active_cells.forEach(function(cell){
-					let num_rep = 0;
-					positions.pre.forEach(function(pos){
-						let x = pos.x + cell.x;
-						let y = pos.y + cell.y;
-						num_rep = num_rep | getCell(x,y);
-						num_rep = num_rep << 1;
-						potential_birth.add(cell_id.create(x,y));
-					});
-					num_rep = num_rep | 1;
-					positions.post.forEach(function(pos){
-						let x = pos.x + cell.x;
-						let y = pos.y + cell.y;
-						num_rep = num_rep << 1;
-						num_rep = num_rep | getCell(x,y);
-						potential_birth.add(cell_id.create(x,y));
-					});
-					if(next_states.get(num_rep) !== 1){
-						deaths.push(cell_id.create(cell.x,cell.y));
+				let temp_data = world_data.slice(0);
+				let temp_cells = new Int8Array(temp_data);
+				for(let ii = 0 ; ii < 1000 ; ii++){
+					for(let jj = 0 ; jj < 1000 ; jj++){
+						let cell_val = getCell(ii - 500, jj - 500);
+						if(cell_val === 0){
+							continue;
+						}
+						if(((cell_val % 2) === 1) && ((cell_val !== 5) && (cell_val !== 7))){
+							temp_cells[ii + (jj * 1000)] = temp_cells[ii + (jj * 1000)] - 1;
+							positions.all.forEach(function(pos){
+								if(temp_cells[ii + pos.x + ((jj + pos.y) * 1000)] !== undefined){
+									temp_cells[ii + pos.x + ((jj + pos.y) * 1000)] -= 2;
+								}
+							});
+						} else if(cell_val === 6){
+							temp_cells[ii + (jj * 1000)] = temp_cells[ii + (jj * 1000)] + 1;
+							positions.all.forEach(function(pos){
+								if(temp_cells[ii + pos.x + ((jj + pos.y) * 1000)] !== undefined){
+									temp_cells[ii + pos.x + ((jj + pos.y) * 1000)] += 2;
+								}
+							});
+						}
 					}
-				});
-
-				// births
-				let potential_birth_filtered = Array.from(potential_birth).map(cell_id.decode).filter(function(cell){
-					return getCell(cell.x,cell.y) === 0;
-				});
-				potential_birth_filtered.forEach(function(cell){
-					let num_rep = 0;
-					positions.pre.forEach(function(pos){
-						let x = pos.x + cell.x;
-						let y = pos.y + cell.y;
-						num_rep = num_rep | getCell(x,y);
-						num_rep = num_rep << 1;
-					});
-					num_rep = num_rep | 0;
-					positions.post.forEach(function(pos){
-						let x = pos.x + cell.x;
-						let y = pos.y + cell.y;
-						num_rep = num_rep << 1;
-						num_rep = num_rep | getCell(x,y);
-					});
-					if(next_states.get(num_rep) === 1){
-						births.push(cell_id.create(cell.x,cell.y));
-					}
-				});
-
-				deaths.forEach(function(cid){
-					cells.delete(cid);
-				});
-				births.forEach(function(cid){
-					cells.add(cid);
-				});
-
-				return {births:births.map(cell_id.decode),deaths:deaths.map(cell_id.decode)};
+				}
+				cells = temp_cells;
+				world_data = temp_data;
 			},
 			getActiveCells:function(){
-				return Array.from(cells).map(cell_id.decode);
+				return Array.from(cells).map(function(val,index){
+					return (val % 2) === 1 ? {x:(index % 1000) - 500, y:(Math.floor(index / 1000)) - 500} : null;
+				}).filter(function(val){return val !== null;});
 			},
 			randomize:function(width,height,n) {
 				for(let i = 0 ; i < n ; i++){
@@ -413,14 +400,30 @@ gol_app.controller('golCtrl',function($scope){
 				}
 			},
 			reset:function(){
-				cells.clear();
+				world_data = new ArrayBuffer(1000000);
+				cells = new Int8Array(world_data);
 			},
 			setCell:function(x,y,active) {
-				let id_string = cell_id.create(x,y);
-				if(active){
-					cells.add(id_string);
-				} else {
-					cells.delete(id_string);
+				let index = x+500 + ((y + 500) * 1000);
+				let cell_val = cells[index];
+				if(cell_val !== undefined){
+					if((cell_val & 1) !== active){
+						if(active === 1){
+							cells[index]++;
+							positions.all.forEach(function(pos){
+								if(cells[index + (pos.x + (pos.y * 1000))] !== undefined){
+									cells[index + (pos.x + (pos.y * 1000))] += 2;
+								}
+							});
+						} else {
+							cells[index]--;
+							positions.all.forEach(function(pos){
+								if(cells[index + (pos.x + (pos.y * 1000))] !== undefined){
+									cells[index + (pos.x + (pos.y * 1000))] -= 2;
+								}
+							});
+						}
+					}
 				}
 			}
 		};
@@ -456,7 +459,9 @@ gol_app.controller('golCtrl',function($scope){
 			},
 			zoom:function(s,x,y){
 				view.zoom(s,x,y);
-				view.drawWorld(world.getActiveCells());
+				if(!going){
+					view.drawWorld(world.getActiveCells());
+				}
 			},
 			setSpeed:function(new_speed){
 				speed = new_speed;
@@ -471,7 +476,9 @@ gol_app.controller('golCtrl',function($scope){
 			},
 			translate:function(x,y){
 				view.translate(x,y);
-				view.drawWorld(world.getActiveCells());
+				if(!going){
+					view.drawWorld(world.getActiveCells());
+				}
 			}
 		}
 	}();
